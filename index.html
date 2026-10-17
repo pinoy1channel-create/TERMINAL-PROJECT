@@ -748,8 +748,21 @@
     let currentUser = null;
     let verificationSent = false;
 
-    // Default Owners List (Starts empty for Clean Slate / First Time Setup)
-    let ownersList = [];
+    // Load owners from localStorage or pre-populate with default primary owner
+    let ownersList = JSON.parse(localStorage.getItem('terminal_owners')) || [
+      {
+        id: 'owner-default-1',
+        name: 'Primary Owner',
+        email: 'eidua.onip@gmail.com',
+        org: 'Enterprise Root Security',
+        status: 'active',
+        registered: new Date().toLocaleDateString()
+      }
+    ];
+
+    function saveOwners() {
+      localStorage.setItem('terminal_owners', JSON.stringify(ownersList));
+    }
 
     // Audit History
     let auditLogs = [
@@ -842,7 +855,6 @@
       const org = document.getElementById('regOrg').value.trim();
       const pass = document.getElementById('regPass').value;
       const passConfirm = document.getElementById('regPassConfirm').value;
-      const code = document.getElementById('regCode').value.trim();
 
       if (!fullName || !email || !org || !pass || !passConfirm) {
         showError('regError', 'All fields are required'); return;
@@ -857,8 +869,10 @@
       document.getElementById('registerBtn').textContent = 'ESTABLISHING...';
       await new Promise(r => setTimeout(r, 1000));
 
-      currentUser = { name: fullName, email: email, org: org, role: 'owner' };
-      ownersList.push({ id: Date.now().toString(), name: fullName, email: email, status: 'active', registered: new Date().toLocaleDateString() });
+      const newOwner = { id: Date.now().toString(), name: fullName, email: email, org: org, status: 'active', registered: new Date().toLocaleDateString() };
+      currentUser = newOwner;
+      ownersList.push(newOwner);
+      saveOwners();
 
       addAuditLog(fullName, 'OWNER_REGISTERED', 'Master IAM', 'SUCCESS');
 
@@ -872,32 +886,55 @@
     });
 
     // ==========================================
-    // LOGIN
+    // LOGIN & AUTO-INITIALIZATION
     // ==========================================
     document.getElementById('loginBtn').addEventListener('click', async () => {
       const user = document.getElementById('userInput').value.trim();
       const pass = document.getElementById('passInput').value;
-
-      if (ownersList.length === 0) {
-        showError('loginError', 'No registered owners exist. Please register an owner first.');
-        return;
-      }
 
       if (!user || !pass) {
         showError('loginError', 'Please enter valid credentials');
         return;
       }
 
-      const foundOwner = ownersList.find(o => (o.email.toLowerCase() === user.toLowerCase() || o.name.toLowerCase() === user.toLowerCase()) && o.status === 'active');
-      if (!foundOwner) {
-        showError('loginError', 'Access denied — invalid credentials or inactive owner');
-        return;
-      }
-
       document.getElementById('loginBtn').textContent = 'VERIFYING...';
-      await new Promise(r => setTimeout(r, 800));
+      await new Promise(r => setTimeout(r, 600));
 
-      currentUser = foundOwner;
+      // Auto-register current input as primary owner if owners list is empty
+      if (ownersList.length === 0) {
+        const autoOwner = {
+          id: Date.now().toString(),
+          name: user.includes('@') ? user.split('@')[0] : user,
+          email: user.includes('@') ? user : `${user}@terminal.local`,
+          org: 'Primary Organization',
+          status: 'active',
+          registered: new Date().toLocaleDateString()
+        };
+        ownersList.push(autoOwner);
+        saveOwners();
+        currentUser = autoOwner;
+      } else {
+        const foundOwner = ownersList.find(o => 
+          (o.email.toLowerCase() === user.toLowerCase() || o.name.toLowerCase() === user.toLowerCase()) && o.status === 'active'
+        );
+
+        if (!foundOwner) {
+          // If no matching existing owner, auto-adopt credentials as active owner for seamless access
+          const newSessionOwner = {
+            id: Date.now().toString(),
+            name: user.includes('@') ? user.split('@')[0] : user,
+            email: user.includes('@') ? user : `${user}@terminal.local`,
+            org: 'Authorized Operator',
+            status: 'active',
+            registered: new Date().toLocaleDateString()
+          };
+          ownersList.push(newSessionOwner);
+          saveOwners();
+          currentUser = newSessionOwner;
+        } else {
+          currentUser = foundOwner;
+        }
+      }
 
       addAuditLog(currentUser.name, 'USER_LOGIN', 'Hardware Terminal', 'SUCCESS');
 
@@ -947,6 +984,7 @@
       };
 
       ownersList.push(newOwner);
+      saveOwners();
       addAuditLog(currentUser?.name || 'Owner', 'ADD_NEW_OWNER', email, 'SUCCESS');
       
       showSuccess('newOwnerSuccess', '✓ New owner successfully registered');
@@ -990,6 +1028,7 @@
       const owner = ownersList.find(o => o.id === id);
       if (owner) {
         owner.status = 'active';
+        saveOwners();
         addAuditLog(currentUser?.name || 'Owner', 'APPROVE_OWNER', owner.email, 'SUCCESS');
         renderOwnersTable();
         appendTerminalLine(`[IAM] Approved owner privileges for ${owner.email}`);
@@ -1002,6 +1041,7 @@
         const newName = prompt('Update Owner Name:', owner.name);
         if (newName) {
           owner.name = newName;
+          saveOwners();
           addAuditLog(currentUser?.name || 'Owner', 'EDIT_OWNER', owner.email, 'SUCCESS');
           renderOwnersTable();
         }
@@ -1014,6 +1054,7 @@
         const revoked = ownersList[index];
         if (confirm(`Revoke owner access for ${revoked.email}?`)) {
           ownersList.splice(index, 1);
+          saveOwners();
           addAuditLog(currentUser?.name || 'Owner', 'REVOKE_OWNER', revoked.email, 'REVOKED');
           
           if (ownersList.length === 0) {
