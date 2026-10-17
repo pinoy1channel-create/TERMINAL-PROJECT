@@ -1,0 +1,1179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TERMINAL STORAGE | High-Capacity Physical Hardware Console</title>
+  <style>
+    :root {
+      --bg-primary: #050505;
+      --bg-secondary: #0f1923;
+      --bg-tertiary: #1a2c3f;
+      --bg-overlay: rgba(0,0,0,0.88);
+      --border-color: #2d4259;
+      --text-primary: #e6efff;
+      --text-secondary: #94b8d6;
+      --accent-green: #00ff88;
+      --accent-cyan: #00e5ff;
+      --accent-amber: #ffb300;
+      --accent-red: #ff3d5a;
+      --accent-purple: #7b61ff;
+      --glow-green: 0 0 10px rgba(0, 255, 136, 0.4);
+      --glow-cyan: 0 0 10px rgba(0, 229, 255, 0.4);
+      --font-mono: 'Courier New', 'JetBrains Mono', monospace;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      font-family: var(--font-mono);
+      line-height: 1.6;
+      min-height: 100vh;
+      background-image:
+        radial-gradient(circle at 20% 20%, rgba(0, 229, 255, 0.03) 0%, transparent 40%),
+        radial-gradient(circle at 80% 80%, rgba(0, 255, 136, 0.03) 0%, transparent 40%);
+      overflow-x: hidden;
+    }
+
+    /* ==========================================
+       AUTH TABS (Login / Register)
+    ========================================== */
+    .auth-tabs {
+      display: flex; margin-bottom: 20px; border-bottom: 1px solid var(--border-color);
+    }
+    .auth-tab {
+      flex: 1; padding: 10px; text-align: center; cursor: pointer;
+      color: var(--text-secondary); border-bottom: 2px solid transparent;
+      transition: all 0.2s ease;
+    }
+    .auth-tab.active {
+      color: var(--accent-cyan); border-bottom-color: var(--accent-cyan);
+    }
+    .auth-tab:hover { color: var(--text-primary); }
+    .auth-panel { display: none; }
+    .auth-panel.active { display: block; }
+
+    /* ==========================================
+       LOGIN & REGISTER OVERLAY
+    ========================================== */
+    .login-overlay {
+      position: fixed; inset: 0;
+      background: var(--bg-overlay);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 9999;
+      transition: opacity 0.4s ease;
+      padding: 16px;
+    }
+    .login-overlay.hidden { display: none; }
+    .login-box {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 32px 40px;
+      width: 100%; max-width: 480px;
+      box-shadow: 0 0 30px rgba(0,229,255,0.15);
+    }
+    .login-title {
+      color: var(--accent-green);
+      font-size: 1.4rem; font-weight: 700;
+      margin-bottom: 6px; text-align: center;
+      text-shadow: var(--glow-green);
+    }
+    .login-subtitle {
+      color: var(--text-secondary); font-size: 0.8rem;
+      text-align: center; margin-bottom: 24px;
+    }
+    .login-input {
+      width: 100%; padding: 12px 16px;
+      background: var(--bg-tertiary); border: 1px solid var(--border-color);
+      color: var(--text-primary); font-family: var(--font-mono);
+      border-radius: 4px; margin-bottom: 14px;
+      font-size: 0.9rem; outline: none;
+      transition: border-color 0.2s;
+    }
+    .login-input:focus { border-color: var(--accent-cyan); box-shadow: var(--glow-cyan); }
+    .login-btn {
+      width: 100%; padding: 12px;
+      background: var(--accent-cyan); color: #000;
+      border: none; border-radius: 4px; font-weight: 700;
+      font-family: var(--font-mono); cursor: pointer;
+      transition: all 0.25s ease; margin-top: 6px;
+    }
+    .login-btn:hover { box-shadow: var(--glow-cyan); transform: translateY(-1px); }
+    .login-btn.secondary {
+      background: transparent; border: 1px solid var(--accent-green);
+      color: var(--accent-green);
+    }
+    .login-error {
+      color: var(--accent-red); font-size: 0.8rem;
+      margin-top: 10px; display: none;
+    }
+    .login-error.show { display: block; }
+    .login-success {
+      color: var(--accent-green); font-size: 0.8rem;
+      margin-top: 10px; display: none;
+    }
+    .login-success.show { display: block; }
+    .role-select {
+      width: 100%; padding: 12px 16px;
+      background: var(--bg-tertiary); border: 1px solid var(--border-color);
+      color: var(--text-primary); font-family: var(--font-mono);
+      border-radius: 4px; margin-bottom: 14px;
+      font-size: 0.9rem; outline: none;
+    }
+    .owner-note {
+      font-size: 0.75rem; color: var(--accent-amber);
+      margin-bottom: 14px; line-height: 1.5;
+      padding: 10px; background: rgba(255,179,0,0.05);
+      border-left: 2px solid var(--accent-amber);
+    }
+    .verification-code-row {
+      display: flex; gap: 10px; align-items: center; margin-bottom: 14px;
+    }
+    .verification-btn {
+      white-space: nowrap; padding: 12px 16px;
+      background: transparent; border: 1px solid var(--accent-purple);
+      color: var(--accent-purple); border-radius: 4px;
+      font-family: var(--font-mono); cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .verification-btn:hover { background: rgba(123,97,255,0.1); }
+
+    /* ==========================================
+       TOP STATUS BAR
+    ========================================== */
+    .top-bar {
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border-color);
+      padding: 10px 24px;
+      display: flex; align-items: center; justify-content: space-between;
+      flex-wrap: wrap; gap: 12px;
+    }
+    .brand { display: flex; align-items: center; gap: 12px; }
+    .brand-logo {
+      color: var(--accent-green); font-weight: 700; font-size: 1.25rem;
+      letter-spacing: 1px; text-shadow: var(--glow-green);
+    }
+    .brand-tag { color: var(--text-secondary); font-size: 0.85rem; }
+    .status-group { display: flex; gap: 20px; font-size: 0.8rem; align-items: center; }
+    .status-item { display: flex; align-items: center; gap: 6px; }
+    .status-dot {
+      width: 10px; height: 10px; border-radius: 50%;
+      background: var(--accent-green); box-shadow: var(--glow-green);
+      animation: pulse 2s infinite;
+    }
+    .status-dot.warn { background: var(--accent-amber); box-shadow: 0 0 8px rgba(255,179,0,0.4); }
+    .status-dot.danger { background: var(--accent-red); box-shadow: 0 0 8px rgba(255,61,90,0.4); animation: none; }
+    .user-badge {
+      background: var(--bg-tertiary); padding: 4px 12px;
+      border-radius: 20px; border: 1px solid var(--accent-green);
+      font-size: 0.75rem; display: flex; align-items: center; gap: 8px;
+    }
+    .user-role-tag {
+      background: var(--accent-purple); color: #fff;
+      padding: 2px 8px; border-radius: 10px; font-size: 0.65rem;
+      text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    .logout-btn {
+      background: transparent; border: none; color: var(--accent-red);
+      cursor: pointer; font-family: var(--font-mono); font-size: 0.75rem;
+    }
+    @keyframes pulse {
+      0%,100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    /* ==========================================
+       LAYOUT & NAVIGATION
+    ========================================== */
+    .app-container {
+      display: grid; 
+      grid-template-columns: 260px 1fr; 
+      min-height: calc(100vh - 52px); 
+    }
+    @media (max-width: 900px) { .app-container { grid-template-columns: 1fr; } }
+
+    .sidebar {
+      background: var(--bg-secondary); border-right: 1px solid var(--border-color);
+      padding: 20px 0;
+    }
+    .sidebar-section { padding: 0 16px; margin-bottom: 32px; }
+    .sidebar-label {
+      color: var(--text-secondary); font-size: 0.75rem;
+      text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; display: block;
+    }
+    .sidebar-link {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 14px; color: var(--text-primary);
+      text-decoration: none; border-radius: 4px; margin-bottom: 4px;
+      font-size: 0.9rem; transition: all 0.2s ease;
+      border-left: 3px solid transparent; cursor: pointer;
+    }
+    .sidebar-link:hover, .sidebar-link.active {
+      background: rgba(0,229,255,0.08); border-left-color: var(--accent-cyan);
+      color: var(--accent-cyan);
+    }
+    .sidebar-link.owner-only { border-left-color: var(--accent-purple); }
+    .sidebar-link span:first-child { color: var(--accent-green); font-weight: bold; }
+
+    .page { display: none; }
+    .page.active { display: block; }
+    .main-content { padding: 24px 32px; }
+    .section-header { margin-bottom: 24px; }
+    .section-title { font-size: 1.4rem; color: var(--accent-cyan); margin-bottom: 4px; }
+    .section-subtitle { color: var(--text-secondary); font-size: 0.85rem; }
+
+    /* ==========================================
+       USER MANAGEMENT TABLE
+    ========================================== */
+    .user-table-wrap {
+      background: var(--bg-secondary); border: 1px solid var(--border-color);
+      border-radius: 6px; overflow-x: auto; margin-top: 20px;
+    }
+    .user-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; text-align: left; }
+    .user-table th, .user-table td { padding: 12px 16px; border-bottom: 1px solid var(--border-color); }
+    .user-table th { color: var(--text-secondary); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; background: var(--bg-tertiary); }
+    .role-badge {
+      padding: 2px 8px; border-radius: 10px; font-size: 0.7rem; text-transform: uppercase; font-weight: bold;
+    }
+    .role-owner { background: var(--accent-purple); color: #fff; }
+    .role-admin { background: var(--accent-green); color: #000; }
+    .role-pending { background: var(--accent-amber); color: #000; }
+    .action-btn {
+      background: transparent; border: none; cursor: pointer; font-family: var(--font-mono);
+      font-size: 0.75rem; margin-right: 8px; transition: opacity 0.2s;
+    }
+    .action-btn:hover { opacity: 0.8; }
+    .btn-edit { color: var(--accent-amber); }
+    .btn-delete { color: var(--accent-red); }
+    .btn-approve { color: var(--accent-green); }
+
+    /* ==========================================
+       STATS, HARDWARE CARDS, TERMINAL
+    ========================================== */
+    .stats-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px; margin-bottom: 32px;
+    }
+    .stat-card {
+      background: var(--bg-secondary); border: 1px solid var(--border-color);
+      border-radius: 6px; padding: 18px 20px;
+      transition: border-color 0.2s ease, transform 0.2s ease;
+    }
+    .stat-card:hover { border-color: var(--accent-cyan); transform: translateY(-2px); }
+    .stat-label {
+      color: var(--text-secondary); font-size: 0.8rem;
+      text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px;
+    }
+    .stat-value { font-size: 1.5rem; font-weight: 700; margin-bottom: 4px; }
+    .stat-note { font-size: 0.75rem; color: var(--accent-green); }
+
+    .storage-section {
+      background: var(--bg-secondary); border: 1px solid var(--border-color);
+      border-radius: 6px; padding: 24px; margin-bottom: 32px;
+    }
+    .storage-row { margin-bottom: 20px; }
+    .storage-top {
+      display: flex; justify-content: space-between;
+      margin-bottom: 6px; font-size: 0.9rem; flex-wrap: wrap; gap: 8px;
+    }
+    .storage-bar-bg { height: 10px; background: var(--bg-tertiary); border-radius: 5px; overflow: hidden; }
+    .storage-bar-fill { height: 100%; border-radius: 5px; transition: width 0.6s ease; }
+    .fill-green { background: linear-gradient(90deg,#00ff88,#00cc6e); }
+    .fill-cyan  { background: linear-gradient(90deg,#00e5ff,#00b8d4); }
+    .fill-amber { background: linear-gradient(90deg,#ffb300,#e69500); }
+    .fill-purple{ background: linear-gradient(90deg,#7b61ff,#634de6); }
+
+    .hardware-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 16px; margin-top: 16px;
+    }
+    .hw-card {
+      background: var(--bg-tertiary); border: 1px solid var(--border-color);
+      border-radius: 6px; padding: 16px; position: relative; overflow: hidden;
+    }
+    .hw-card::before {
+      content: ''; position: absolute; top:0; left:0; width: 4px; height: 100%;
+      background: var(--accent-cyan);
+    }
+    .hw-card.tape::before { background: var(--accent-purple); }
+    .hw-card.hdd::before { background: var(--accent-amber); }
+    .hw-card.ssd::before { background: var(--accent-green); }
+    .hw-title { font-size: 1rem; font-weight: bold; color: var(--text-primary); margin-bottom: 4px; }
+    .hw-tech { font-size: 0.75rem; color: var(--accent-cyan); text-transform: uppercase; margin-bottom: 10px; }
+    .hw-spec { font-size: 0.8rem; color: var(--text-secondary); display: flex; justify-content: space-between; margin-bottom: 4px; }
+
+    .terminal-panel {
+      background: #0a0f14; border: 1px solid var(--border-color);
+      border-radius: 6px; overflow: hidden;
+    }
+    .terminal-header {
+      background: var(--bg-tertiary); padding: 8px 16px;
+      display: flex; align-items: center; justify-content: space-between;
+      font-size: 0.8rem; border-bottom: 1px solid var(--border-color);
+    }
+    .terminal-dots { display: flex; gap: 6px; }
+    .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+    .dot.red { background: #ff5f57; }
+    .dot.yellow { background: #ffbd2e; }
+    .dot.green { background: #28ca42; }
+    .terminal-body {
+      padding: 20px; font-size: 0.88rem; color: #b8d1e8;
+      min-height: 200px; max-height: 340px; overflow-y: auto;
+    }
+    .terminal-line { margin-bottom: 6px; line-height: 1.5; word-break: break-all; }
+    .prompt { color: var(--accent-green); font-weight: bold; }
+    .cmd { color: var(--accent-cyan); }
+    .ok { color: var(--accent-green); }
+    .warn { color: var(--accent-amber); }
+    .err { color: var(--accent-red); }
+    .info { color: var(--text-secondary); }
+
+    .cmd-input-row {
+      display: flex; align-items: center; gap: 10px;
+      padding: 14px 20px; background: var(--bg-tertiary);
+      border-top: 1px solid var(--border-color);
+    }
+    .cmd-input {
+      flex: 1; background: transparent; border: none;
+      color: var(--text-primary); font-family: var(--font-mono);
+      font-size: 0.9rem; outline: none;
+    }
+    .cmd-submit {
+      padding: 8px 16px; background: var(--accent-cyan);
+      color: #000; border: none; border-radius: 4px;
+      font-family: var(--font-mono); cursor: pointer; font-weight: 600;
+      transition: all 0.2s ease;
+    }
+    .cmd-submit:hover { box-shadow: var(--glow-cyan); }
+
+    .btn-row { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 20px; }
+    .btn {
+      padding: 10px 20px; border-radius: 4px; font-family: var(--font-mono);
+      font-size: 0.85rem; cursor: pointer; border: none; transition: all 0.25s ease;
+    }
+    .btn-primary { background: var(--accent-cyan); color: #000; font-weight: 600; }
+    .btn-primary:hover { box-shadow: var(--glow-cyan); transform: translateY(-1px); }
+    .btn-secondary { background: transparent; border: 1px solid var(--accent-green); color: var(--accent-green); }
+    .btn-secondary:hover { background: rgba(0,255,136,0.1); }
+    .btn-danger { background: transparent; border: 1px solid var(--accent-red); color: var(--accent-red); }
+    .btn-danger:hover { background: rgba(255,61,90,0.1); }
+
+    @media (max-width: 600px) {
+      .main-content { padding: 16px; }
+      .status-group { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ==========================================
+       AUTHENTICATION: LOGIN + OWNER REGISTRATION
+  ========================================== -->
+  <div class="login-overlay" id="loginOverlay">
+    <div class="login-box">
+      <div class="login-title">TERMINAL STORAGE</div>
+      <div class="login-subtitle">High-Capacity Physical Hardware Infrastructure</div>
+
+      <!-- Auth Tabs -->
+      <div class="auth-tabs">
+        <div class="auth-tab active" data-tab="login">SIGN IN</div>
+        <div class="auth-tab" data-tab="register">REGISTER OWNER</div>
+      </div>
+
+      <!-- LOGIN PANEL -->
+      <div class="auth-panel active" id="panel-login">
+        <input type="text" class="login-input" id="userInput" placeholder="Username / Email">
+        <input type="password" class="login-input" id="passInput" placeholder="Password">
+        <div class="owner-note" id="noOwnerAlert" style="display:none; margin-bottom:14px;">
+          ⚠ SYSTEM UNINITIALIZED: No Primary Owner configured. Please switch to "REGISTER OWNER" tab to set up the system's root authority.
+        </div>
+        <div class="login-error" id="loginError">Access denied — invalid credentials</div>
+        <button class="login-btn" id="loginBtn">AUTHENTICATE →</button>
+      </div>
+
+      <!-- OWNER REGISTRATION PANEL -->
+      <div class="auth-panel" id="panel-register">
+        <div class="owner-note">
+          FIRST OWNER REGISTRATION — Establishes primary cluster ownership and unlocks physical terminal root authority.
+        </div>
+        <input type="text" class="login-input" id="regFullName" placeholder="Full Legal Name">
+        <input type="email" class="login-input" id="regEmail" placeholder="Admin Email Address">
+        <input type="text" class="login-input" id="regOrg" placeholder="Organization / Entity Name">
+        <input type="password" class="login-input" id="regPass" placeholder="Create Master Password">
+        <input type="password" class="login-input" id="regPassConfirm" placeholder="Confirm Master Password">
+        
+        <div class="verification-code-row">
+          <input type="text" class="login-input" id="regCode" placeholder="Verification Code" style="flex:1; margin-bottom:0;">
+          <button class="verification-btn" id="sendCodeBtn">SEND CODE</button>
+        </div>
+        <div class="login-error" id="regError"></div>
+        <div class="login-success" id="regSuccess"></div>
+        <button class="login-btn secondary" id="registerBtn" style="margin-top:14px;">ESTABLISH OWNER →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       MAIN APPLICATION (Hidden Until Auth)
+  ========================================== -->
+  <div id="mainApp" style="display:none;">
+    <header class="top-bar">
+      <div class="brand">
+        <span class="brand-logo">TERMINAL STORAGE</span>
+        <span class="brand-tag">// PHYSICAL HARDWARE v4.1-ENTERPRISE</span>
+      </div>
+      <div class="status-group">
+        <div class="status-item">
+          <span class="status-dot" id="dot-connection"></span>
+          <span id="text-connection">NVMe-oF CONNECTED</span>
+        </div>
+        <div class="status-item">
+          <span class="status-dot" id="dot-cluster"></span>
+          <span id="text-cluster">CLUSTER: ONLINE (98.4 PB)</span>
+        </div>
+        <div class="user-badge">
+          <span>●</span>
+          <span id="currentUser">PRIMARY OWNER</span>
+          <span class="user-role-tag" id="userRoleTag">ROOT OWNER</span>
+          <button class="logout-btn" id="logoutBtn">[EXIT]</button>
+        </div>
+      </div>
+    </header>
+
+    <div class="app-container">
+      <!-- Sidebar -->
+      <aside class="sidebar">
+        <div class="sidebar-section">
+          <span class="sidebar-label">Main Console</span>
+          <a class="sidebar-link active" data-page="dashboard"><span>▸</span> Dashboard</a>
+          <a class="sidebar-link" data-page="nodes"><span>▸</span> Node Monitoring</a>
+          <a class="sidebar-link" data-page="storage"><span>▸</span> Storage Volumes</a>
+          <a class="sidebar-link" data-page="logs"><span>▸</span> Live Event Stream</a>
+        </div>
+        <div class="sidebar-section">
+          <span class="sidebar-label">Owner Control Center</span>
+          <a class="sidebar-link owner-only" data-page="owners"><span>▸</span> Owner Management</a>
+          <a class="sidebar-link owner-only" data-page="security"><span>▸</span> Security & IAM</a>
+          <a class="sidebar-link owner-only" data-page="audit"><span>▸</span> Audit Log</a>
+        </div>
+      </aside>
+
+      <!-- Main Content Pages -->
+      <main class="main-content">
+
+        <!-- DASHBOARD PAGE -->
+        <div class="page active" id="page-dashboard">
+          <div class="section-header">
+            <h1 class="section-title">root@terminal-storage:~/# DASHBOARD</h1>
+            <p class="section-subtitle">Active Operator: <span id="welcomeName" style="color:var(--accent-green);">Primary Owner</span> • Sync Timestamp: <span id="last-updated">--</span></p>
+          </div>
+          <div class="stats-grid">
+            <div class="stat-card"><div class="stat-label">Total Pool Capacity</div><div class="stat-value" id="stat-capacity">98.45 PB</div><div class="stat-note">Exascale Ready</div></div>
+            <div class="stat-card"><div class="stat-label">Physical Drive Arrays</div><div class="stat-value" id="stat-nodes">128 Nodes</div><div class="stat-note">PCIe Gen5 & SAS-4</div></div>
+            <div class="stat-card"><div class="stat-label">Registered Owners</div><div class="stat-value" id="stat-owners">1 Active</div><div class="stat-note">Multi-Sig Guarded</div></div>
+            <div class="stat-card"><div class="stat-label">Storage Bus Uptime</div><div class="stat-value" id="stat-uptime">99.999%</div><div class="stat-note">Zero Frame Errors</div></div>
+          </div>
+
+          <!-- STORAGE BREAKDOWN -->
+          <div class="storage-section">
+            <h3 style="margin-bottom:20px;color:var(--accent-cyan);">▸ PHYSICAL STORAGE CAPACITY ALLOCATION</h3>
+            
+            <div class="storage-row">
+              <div class="storage-top">
+                <span>Enterprise NVMe SSDs (245.76 TB Ultra-Density Kioxia/Solidigm Drives)</span>
+                <span style="color:var(--accent-green);">42.8 PB / 50.0 PB Used (85.6%)</span>
+              </div>
+              <div class="storage-bar-bg"><div class="storage-bar-fill fill-green" style="width: 85.6%;"></div></div>
+            </div>
+
+            <div class="storage-row">
+              <div class="storage-top">
+                <span>Enterprise High-Density HDDs (32 TB Seagate Exos HAMR Drives)</span>
+                <span style="color:var(--accent-cyan);">28.1 PB / 35.0 PB Used (80.2%)</span>
+              </div>
+              <div class="storage-bar-bg"><div class="storage-bar-fill fill-cyan" style="width: 80.2%;"></div></div>
+            </div>
+
+            <div class="storage-row">
+              <div class="storage-top">
+                <span>Magnetic Tape Libraries (IBM TS1170 50TB & LTO-9 18/45TB Tapes)</span>
+                <span style="color:var(--accent-purple);">6.2 PB / 13.45 PB Used (46.1%)</span>
+              </div>
+              <div class="storage-bar-bg"><div class="storage-bar-fill fill-purple" style="width: 46.1%;"></div></div>
+            </div>
+
+            <div class="btn-row">
+              <button class="btn btn-primary" onclick="navigateTo('owners')">MANAGE OWNERS</button>
+              <button class="btn btn-secondary" onclick="runCommand('system --health-check')">RUN HARDWARE DIAGNOSTICS</button>
+              <button class="btn btn-danger" onclick="runCommand('system --backup-now')">INITIATE DISASTER BACKUP</button>
+            </div>
+          </div>
+
+          <!-- TERMINAL CLI -->
+          <div class="terminal-panel">
+            <div class="terminal-header">
+              <div class="terminal-dots"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span></div>
+              <span>owner@physical-terminal — direct node interface</span>
+              <span style="color:var(--accent-purple);">● ROOT ACTIVE</span>
+            </div>
+            <div class="terminal-body" id="terminal-log">
+              <div class="terminal-line"><span class="prompt">[SYSTEM]</span> Hardware bus initialised. PCIe Gen5 x16 lanes active.</div>
+              <div class="terminal-line"><span class="prompt">[SECURITY]</span> <span class="ok">✓</span> Master Owner credentials verified via RSA-4096 signature.</div>
+              <div class="terminal-line"><span class="prompt">[INFO]</span> Type <span class="cmd">'help'</span> to inspect physical drive and owner terminal commands.</div>
+            </div>
+            <form class="cmd-input-row" onsubmit="handleCommand(event)">
+              <span style="color:var(--accent-purple);font-weight:bold;">owner@storage:~$</span>
+              <input type="text" class="cmd-input" id="cmd-input" placeholder="Type a command (e.g., 'hardware --capacity', 'storage --list', 'help')...">
+              <button type="submit" class="cmd-submit">EXECUTE</button>
+            </form>
+          </div>
+        </div>
+
+        <!-- NODE MONITORING PAGE -->
+        <div class="page" id="page-nodes">
+          <div class="section-header">
+            <h1 class="section-title">root@terminal-storage:~/# NODE MONITORING</h1>
+            <p class="section-subtitle">Real-time NVMe-oF, SAS-4, and PCIe Expansion Chassis Health</p>
+          </div>
+
+          <div class="stats-grid">
+            <div class="stat-card"><div class="stat-label">Active Drive Chassis</div><div class="stat-value">16 Racks</div><div class="stat-note">100% Operational</div></div>
+            <div class="stat-card"><div class="stat-label">NVMe Bus Latency</div><div class="stat-value" style="color:var(--accent-green);">12.4 µs</div><div class="stat-note">Sub-millisecond access</div></div>
+            <div class="stat-card"><div class="stat-label">Mean Array Temp</div><div class="stat-value" style="color:var(--accent-amber);">38°C</div><div class="stat-note">Liquid Cooling Nominal</div></div>
+            <div class="stat-card"><div class="stat-label">Aggregate Read</div><div class="stat-value">4.2 TB/s</div><div class="stat-note">PCIe Gen5 Fabrics</div></div>
+          </div>
+
+          <div class="storage-section">
+            <h3 style="margin-bottom:16px;color:var(--accent-cyan);">▸ PHYSICAL STORAGE HARDWARE MATRIX</h3>
+            <div class="hardware-grid">
+              <div class="hw-card ssd">
+                <div class="hw-title">Solidigm D5-P5336 / Kioxia LC9</div>
+                <div class="hw-tech">245.76 TB Quad-Level Cell NVMe SSD</div>
+                <div class="hw-spec"><span>Form Factor:</span> <span>E3.S / U.2 PCIe 5.0</span></div>
+                <div class="hw-spec"><span>Interface:</span> <span>NVMe 2.0 Dual-Port</span></div>
+                <div class="hw-spec"><span>Sequential Read:</span> <span>14,500 MB/s</span></div>
+                <div class="hw-spec"><span>Status:</span> <span style="color:var(--accent-green);">ONLINE / HEALTHY</span></div>
+              </div>
+
+              <div class="hw-card hdd">
+                <div class="hw-title">Seagate Exos Mozaic 3+</div>
+                <div class="hw-tech">32 TB HAMR Enterprise Hard Drive</div>
+                <div class="hw-spec"><span>Areal Density:</span> <span>3+ TB/Platter</span></div>
+                <div class="hw-spec"><span>Interface:</span> <span>12Gb/s SAS / SATA III</span></div>
+                <div class="hw-spec"><span>Spindle Speed:</span> <span>7200 RPM</span></div>
+                <div class="hw-spec"><span>Status:</span> <span style="color:var(--accent-green);">ONLINE / NOMINAL</span></div>
+              </div>
+
+              <div class="hw-card tape">
+                <div class="hw-title">IBM TS1170 Enterprise Tape Drive</div>
+                <div class="hw-tech">50 TB Native / 150 TB Compressed Cartridge</div>
+                <div class="hw-spec"><span>Media Type:</span> <span>JF Strontium Ferrite</span></div>
+                <div class="hw-spec"><span>Transfer Rate:</span> <span>400 MB/s Native</span></div>
+                <div class="hw-spec"><span>Archival Life:</span> <span>30+ Years</span></div>
+                <div class="hw-spec"><span>Status:</span> <span style="color:var(--accent-purple);">MOUNTED / READY</span></div>
+              </div>
+
+              <div class="hw-card tape">
+                <div class="hw-title">LTO-9 Tape Library System</div>
+                <div class="hw-tech">18 TB Native / 45 TB Compressed Tape</div>
+                <div class="hw-spec"><span>Robotic Arm:</span> <span>Dual Loader Active</span></div>
+                <div class="hw-spec"><span>Slots:</span> <span>1,200 Cartridges</span></div>
+                <div class="hw-spec"><span>Encryption:</span> <span>Hardware AES-256</span></div>
+                <div class="hw-spec"><span>Status:</span> <span style="color:var(--accent-green);">ONLINE / IDLE</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- STORAGE VOLUMES PAGE -->
+        <div class="page" id="page-storage">
+          <div class="section-header">
+            <h1 class="section-title">root@terminal-storage:~/# STORAGE VOLUMES</h1>
+            <p class="section-subtitle">Logical Volume Allocation and SAN/NAS Fabric Partitioning</p>
+          </div>
+          <div class="storage-section">
+            <h3 style="margin-bottom:16px;color:var(--accent-cyan);">▸ LOGICAL STORAGE VOLUMES OVERVIEW</h3>
+            <table class="user-table">
+              <thead>
+                <tr>
+                  <th>Volume Name</th>
+                  <th>Hardware Substrate</th>
+                  <th>Raw Capacity</th>
+                  <th>Filesystem</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><code>/vol/nvme-flash-p01</code></td>
+                  <td>245.76TB NVMe SSD Array</td>
+                  <td>50.0 PB</td>
+                  <td>ZFS (RAID-Z2)</td>
+                  <td><span class="role-badge role-admin">MOUNTED</span></td>
+                </tr>
+                <tr>
+                  <td><code>/vol/hamr-archive-p02</code></td>
+                  <td>32TB Seagate Exos Racks</td>
+                  <td>35.0 PB</td>
+                  <td>XFS / Ceph Block</td>
+                  <td><span class="role-badge role-admin">MOUNTED</span></td>
+                </tr>
+                <tr>
+                  <td><code>/vol/cold-tape-vault</code></td>
+                  <td>IBM TS1170 Tape Robots</td>
+                  <td>13.45 PB</td>
+                  <td>LTFS (Tape FS)</td>
+                  <td><span class="role-badge role-owner">COLD VAULT</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- LIVE EVENT STREAM PAGE -->
+        <div class="page" id="page-logs">
+          <div class="section-header">
+            <h1 class="section-title">root@terminal-storage:~/# LIVE EVENT STREAM</h1>
+            <p class="section-subtitle">Low-level Kernel, SCSI/NVMe Driver, and Owner Audit Feed</p>
+          </div>
+          <div class="terminal-panel" style="min-height: 400px;">
+            <div class="terminal-header">
+              <span>stream@kernel-bus — tail -f /var/log/hardware.log</span>
+              <span style="color:var(--accent-green);">LIVE STREAMING</span>
+            </div>
+            <div class="terminal-body" id="event-stream-body">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+        </div>
+
+        <!-- OWNER MANAGEMENT PAGE -->
+        <div class="page" id="page-owners">
+          <div class="section-header">
+            <h1 class="section-title">root@terminal-storage:~/# OWNER MANAGEMENT</h1>
+            <p class="section-subtitle">Register new owners • Approve access requests • Manage administrative authority</p>
+          </div>
+          <div class="stats-grid">
+            <div class="stat-card"><div class="stat-label">Total Owners</div><div class="stat-value" id="totalOwners">1</div><div class="stat-note">1 Active Primary</div></div>
+            <div class="stat-card"><div class="stat-label">Pending Approvals</div><div class="stat-value" id="pendingCount">0</div><div class="stat-note">Requires owner sign-off</div></div>
+            <div class="stat-card"><div class="stat-label">Security Scheme</div><div class="stat-value">Multi-Sig</div><div class="stat-note">2-of-3 threshold</div></div>
+            <div class="stat-card"><div class="stat-label">Encryption Key</div><div class="stat-value">FIPS 140-3</div><div class="stat-note">Hardware HSM</div></div>
+          </div>
+          
+          <div class="storage-section">
+            <h3 style="margin-bottom:20px;color:var(--accent-cyan);">▸ REGISTER NEW SYSTEM OWNER</h3>
+            <div class="owner-note" style="margin-bottom:16px;">
+              Granting Owner status provides unrestricted access to high-capacity storage controllers and cryptographic master keys.
+            </div>
+            <input type="text" class="login-input" id="newOwnerName" placeholder="Full Name">
+            <input type="email" class="login-input" id="newOwnerEmail" placeholder="Email Address">
+            <select class="role-select" id="newOwnerStatus">
+              <option value="active">Active Immediately (Primary Owner Approved)</option>
+              <option value="pending">Pending Co-Owner Review</option>
+            </select>
+            <div class="login-error" id="newOwnerError"></div>
+            <div class="login-success" id="newOwnerSuccess"></div>
+            <div class="btn-row">
+              <button class="btn btn-primary" id="addOwnerBtn">+ REGISTER OWNER</button>
+              <button class="btn btn-secondary" onclick="runCommand('owner --list')">LIST CURRENT OWNERS</button>
+            </div>
+          </div>
+
+          <div class="user-table-wrap">
+            <table class="user-table">
+              <thead>
+                <tr>
+                  <th>Owner Name</th>
+                  <th>Email</th>
+                  <th>Role Status</th>
+                  <th>Date Enrolled</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="ownersTableBody">
+                <!-- Populated by JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- SECURITY PAGE -->
+        <div class="page" id="page-security">
+          <div class="section-header">
+            <h1 class="section-title">root@terminal-storage:~/# SECURITY & ACCESS</h1>
+            <p class="section-subtitle">Hardware Cryptographic Keys and Identity & Access Management (IAM)</p>
+          </div>
+          <div class="stats-grid">
+            <div class="stat-card"><div class="stat-label">HSM Module</div><div class="stat-value" style="color:var(--accent-green);">ARMED</div><div class="stat-note">Tamper detection active</div></div>
+            <div class="stat-card"><div class="stat-label">Self-Encrypting Drives</div><div class="stat-value">TCG Opal 2.0</div><div class="stat-note">100% Volume Coverage</div></div>
+            <div class="stat-card"><div class="stat-label">Zero-Trust IAM</div><div class="stat-value">Enforced</div><div class="stat-note">Owner Key Authentication</div></div>
+            <div class="stat-card"><div class="stat-label">Audit Retention</div><div class="stat-value">Immutable</div><div class="stat-note">WORM Tape Mirror</div></div>
+          </div>
+        </div>
+
+        <!-- AUDIT LOG PAGE -->
+        <div class="page" id="page-audit">
+          <div class="section-header">
+            <h1 class="section-title">root@terminal-storage:~/# AUDIT LOG</h1>
+            <p class="section-subtitle">Immutable Audit Trail of All Physical Drive & Terminal Actions</p>
+          </div>
+          <div class="user-table-wrap">
+            <table class="user-table">
+              <thead>
+                <tr>
+                  <th>Timestamp</th>
+                  <th>Actor</th>
+                  <th>Command / Action</th>
+                  <th>Target Subsystem</th>
+                  <th>Result</th>
+                </tr>
+              </thead>
+              <tbody id="auditTableBody">
+                <!-- Populated by JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </main>
+    </div>
+  </div>
+
+  <script>
+    // ==========================================
+    // GLOBAL STATE & DATA INITIALIZATION
+    // ==========================================
+    let currentUser = null;
+    let verificationSent = false;
+
+    // Default Owners List (Starts empty for Clean Slate / First Time Setup)
+    let ownersList = [];
+
+    // Audit History
+    let auditLogs = [
+      { timestamp: new Date().toLocaleTimeString(), actor: 'SYSTEM', action: 'BOOT_SEQUENCE', target: 'NVMe Fabric', result: 'INITIALIZED' }
+    ];
+
+    // Event Stream Buffer
+    let streamLogs = [
+      "[INFO] NVMe-oF target host connected via 100GbE RoCEv2 fabric.",
+      "[OK] 245.76TB Solidigm/Kioxia SSD pool health verification passed (0 bad blocks).",
+      "[INFO] Seagate Exos 32TB HAMR drive array operating at nominal 38°C.",
+      "[INFO] IBM TS1170 Tape robotic arm calibrated successfully."
+    ];
+
+    // Check system status on page load
+    window.addEventListener('DOMContentLoaded', () => {
+      checkOwnerSetup();
+    });
+
+    function checkOwnerSetup() {
+      const alertBox = document.getElementById('noOwnerAlert');
+      if (ownersList.length === 0) {
+        if (alertBox) alertBox.style.display = 'block';
+      } else {
+        if (alertBox) alertBox.style.display = 'none';
+      }
+    }
+
+    // Page Navigation
+    function navigateTo(pageId) {
+      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.sidebar-link').forEach(l => l.classList.remove('active'));
+
+      const targetPage = document.getElementById('page-' + pageId);
+      const targetLink = document.querySelector(`.sidebar-link[data-page="${pageId}"]`);
+
+      if (targetPage) targetPage.classList.add('active');
+      if (targetLink) targetLink.classList.add('active');
+
+      if (pageId === 'owners') renderOwnersTable();
+      if (pageId === 'audit') renderAuditTable();
+      if (pageId === 'logs') renderStreamLogs();
+    }
+
+    document.querySelectorAll('.sidebar-link').forEach(link => {
+      link.addEventListener('click', (e) => {
+        const page = link.getAttribute('data-page');
+        if (page) navigateTo(page);
+      });
+    });
+
+    // ==========================================
+    // AUTH TABS SWITCHING
+    // ==========================================
+    document.querySelectorAll('[data-tab]').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        const panelId = 'panel-' + tab.getAttribute('data-tab');
+        document.querySelectorAll('.auth-panel').forEach(p => p.classList.remove('active'));
+        document.getElementById(panelId).classList.add('active');
+        
+        document.getElementById('loginError').classList.remove('show');
+        document.getElementById('regError').classList.remove('show');
+        document.getElementById('regSuccess').classList.remove('show');
+      });
+    });
+
+    // ==========================================
+    // OWNER REGISTRATION WORKFLOW
+    // ==========================================
+    document.getElementById('sendCodeBtn').addEventListener('click', async () => {
+      const email = document.getElementById('regEmail').value.trim();
+      if (!email) {
+        showError('regError', 'Enter a valid owner email first');
+        return;
+      }
+      
+      document.getElementById('sendCodeBtn').textContent = 'SENDING...';
+      await new Promise(r => setTimeout(r, 800));
+      
+      verificationSent = true;
+      showSuccess('regSuccess', '✓ Verification code [884-920] sent to ' + email);
+      document.getElementById('sendCodeBtn').textContent = 'RESEND';
+    });
+
+    document.getElementById('registerBtn').addEventListener('click', async () => {
+      const fullName = document.getElementById('regFullName').value.trim();
+      const email = document.getElementById('regEmail').value.trim();
+      const org = document.getElementById('regOrg').value.trim();
+      const pass = document.getElementById('regPass').value;
+      const passConfirm = document.getElementById('regPassConfirm').value;
+      const code = document.getElementById('regCode').value.trim();
+
+      if (!fullName || !email || !org || !pass || !passConfirm) {
+        showError('regError', 'All fields are required'); return;
+      }
+      if (pass !== passConfirm) {
+        showError('regError', 'Passwords do not match'); return;
+      }
+      if (pass.length < 8) {
+        showError('regError', 'Password must be at least 8 characters'); return;
+      }
+
+      document.getElementById('registerBtn').textContent = 'ESTABLISHING...';
+      await new Promise(r => setTimeout(r, 1000));
+
+      currentUser = { name: fullName, email: email, org: org, role: 'owner' };
+      ownersList.push({ id: Date.now().toString(), name: fullName, email: email, status: 'active', registered: new Date().toLocaleDateString() });
+
+      addAuditLog(fullName, 'OWNER_REGISTERED', 'Master IAM', 'SUCCESS');
+
+      showSuccess('regSuccess', '✓ Owner established! Signing into master console...');
+      
+      setTimeout(() => {
+        document.getElementById('loginOverlay').classList.add('hidden');
+        document.getElementById('mainApp').style.display = 'block';
+        initApp();
+      }, 1000);
+    });
+
+    // ==========================================
+    // LOGIN
+    // ==========================================
+    document.getElementById('loginBtn').addEventListener('click', async () => {
+      const user = document.getElementById('userInput').value.trim();
+      const pass = document.getElementById('passInput').value;
+
+      if (ownersList.length === 0) {
+        showError('loginError', 'No registered owners exist. Please register an owner first.');
+        return;
+      }
+
+      if (!user || !pass) {
+        showError('loginError', 'Please enter valid credentials');
+        return;
+      }
+
+      const foundOwner = ownersList.find(o => (o.email.toLowerCase() === user.toLowerCase() || o.name.toLowerCase() === user.toLowerCase()) && o.status === 'active');
+      if (!foundOwner) {
+        showError('loginError', 'Access denied — invalid credentials or inactive owner');
+        return;
+      }
+
+      document.getElementById('loginBtn').textContent = 'VERIFYING...';
+      await new Promise(r => setTimeout(r, 800));
+
+      currentUser = foundOwner;
+
+      addAuditLog(currentUser.name, 'USER_LOGIN', 'Hardware Terminal', 'SUCCESS');
+
+      document.getElementById('loginOverlay').classList.add('hidden');
+      document.getElementById('mainApp').style.display = 'block';
+      initApp();
+    });
+
+    document.getElementById('logoutBtn').addEventListener('click', () => {
+      addAuditLog(currentUser?.name || 'Owner', 'USER_LOGOUT', 'Terminal CLI', 'SUCCESS');
+      location.reload();
+    });
+
+    // ==========================================
+    // APPLICATION INITIALIZATION
+    // ==========================================
+    function initApp() {
+      if (currentUser) {
+        document.getElementById('currentUser').textContent = currentUser.name.toUpperCase();
+        document.getElementById('welcomeName').textContent = currentUser.name;
+        document.getElementById('userRoleTag').textContent = ownersList[0]?.id === currentUser.id ? 'PRIMARY OWNER' : 'CO-OWNER';
+      }
+      document.getElementById('last-updated').textContent = new Date().toLocaleTimeString();
+      renderOwnersTable();
+      startRealtimeFeeds();
+    }
+
+    // ==========================================
+    // OWNER MANAGEMENT CRUD OPERATIONS
+    // ==========================================
+    document.getElementById('addOwnerBtn').addEventListener('click', () => {
+      const name = document.getElementById('newOwnerName').value.trim();
+      const email = document.getElementById('newOwnerEmail').value.trim();
+      const status = document.getElementById('newOwnerStatus').value;
+
+      if (!name || !email) {
+        showError('newOwnerError', 'Please enter name and email');
+        return;
+      }
+
+      const newOwner = {
+        id: Date.now().toString(),
+        name: name,
+        email: email,
+        status: status,
+        registered: new Date().toLocaleDateString()
+      };
+
+      ownersList.push(newOwner);
+      addAuditLog(currentUser?.name || 'Owner', 'ADD_NEW_OWNER', email, 'SUCCESS');
+      
+      showSuccess('newOwnerSuccess', '✓ New owner successfully registered');
+      document.getElementById('newOwnerName').value = '';
+      document.getElementById('newOwnerEmail').value = '';
+
+      renderOwnersTable();
+      appendTerminalLine(`[IAM] Registered new owner credential: ${email} (${status})`);
+    });
+
+    function renderOwnersTable() {
+      const tbody = document.getElementById('ownersTableBody');
+      if (!tbody) return;
+
+      tbody.innerHTML = '';
+      ownersList.forEach(owner => {
+        const tr = document.createElement('tr');
+        const badgeClass = owner.status === 'active' ? 'role-owner' : 'role-pending';
+        
+        tr.innerHTML = `
+          <td><strong>${escapeHtml(owner.name)}</strong></td>
+          <td>${escapeHtml(owner.email)}</td>
+          <td><span class="role-badge ${badgeClass}">${owner.status.toUpperCase()}</span></td>
+          <td>${owner.registered}</td>
+          <td>
+            ${owner.status === 'pending' ? `<button class="action-btn btn-approve" onclick="approveOwner('${owner.id}')">[APPROVE]</button>` : ''}
+            <button class="action-btn btn-edit" onclick="editOwner('${owner.id}')">[EDIT]</button>
+            <button class="action-btn btn-delete" onclick="deleteOwner('${owner.id}')">[REVOKE]</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      document.getElementById('totalOwners').textContent = ownersList.length;
+      const pendingCount = ownersList.filter(o => o.status === 'pending').length;
+      document.getElementById('pendingCount').textContent = pendingCount;
+      document.getElementById('stat-owners').textContent = `${ownersList.filter(o => o.status === 'active').length} Active`;
+    }
+
+    function approveOwner(id) {
+      const owner = ownersList.find(o => o.id === id);
+      if (owner) {
+        owner.status = 'active';
+        addAuditLog(currentUser?.name || 'Owner', 'APPROVE_OWNER', owner.email, 'SUCCESS');
+        renderOwnersTable();
+        appendTerminalLine(`[IAM] Approved owner privileges for ${owner.email}`);
+      }
+    }
+
+    function editOwner(id) {
+      const owner = ownersList.find(o => o.id === id);
+      if (owner) {
+        const newName = prompt('Update Owner Name:', owner.name);
+        if (newName) {
+          owner.name = newName;
+          addAuditLog(currentUser?.name || 'Owner', 'EDIT_OWNER', owner.email, 'SUCCESS');
+          renderOwnersTable();
+        }
+      }
+    }
+
+    function deleteOwner(id) {
+      const index = ownersList.findIndex(o => o.id === id);
+      if (index !== -1) {
+        const revoked = ownersList[index];
+        if (confirm(`Revoke owner access for ${revoked.email}?`)) {
+          ownersList.splice(index, 1);
+          addAuditLog(currentUser?.name || 'Owner', 'REVOKE_OWNER', revoked.email, 'REVOKED');
+          
+          if (ownersList.length === 0) {
+            alert('All owners have been revoked. Returning to registration setup.');
+            location.reload();
+            return;
+          }
+          renderOwnersTable();
+          appendTerminalLine(`[IAM] Revoked owner access for ${revoked.email}`);
+        }
+      }
+    }
+
+    // ==========================================
+    // INTERACTIVE TERMINAL HANDLER
+    // ==========================================
+    function handleCommand(e) {
+      e.preventDefault();
+      const input = document.getElementById('cmd-input');
+      const command = input.value.trim();
+      if (!command) return;
+
+      runCommand(command);
+      input.value = '';
+    }
+
+    function runCommand(cmd) {
+      appendTerminalLine(`<span class="prompt">owner@storage:~$</span> <span class="cmd">${escapeHtml(cmd)}</span>`);
+      addAuditLog(currentUser?.name || 'Owner', 'EXECUTE_CMD', cmd, 'EXECUTED');
+
+      const lower = cmd.toLowerCase().trim();
+
+      if (lower === 'help') {
+        appendTerminalLine(`<span class="info">Available Hardware Commands:</span>`);
+        appendTerminalLine(`  <span class="cmd">hardware --capacity</span>  : Display maximum drive physical specs (245TB SSDs, 32TB HAMR, Tape)`);
+        appendTerminalLine(`  <span class="cmd">storage --list</span>       : List active logical pools & NVMe drive arrays`);
+        appendTerminalLine(`  <span class="cmd">node --status</span>        : Show NVMe-oF drive chassis status`);
+        appendTerminalLine(`  <span class="cmd">owner --list</span>         : Display enrolled high-capacity system owners`);
+        appendTerminalLine(`  <span class="cmd">system --health-check</span>: Run full PCIe & drive bus diagnostic`);
+        appendTerminalLine(`  <span class="cmd">system --backup-now</span>  : Trigger asynchronous archive snapshot`);
+        appendTerminalLine(`  <span class="cmd">clear</span>                : Clear console output`);
+      } 
+      else if (lower === 'hardware --capacity') {
+        appendTerminalLine(`<span class="ok">=== PHYSICAL MAXIMUM HARDWARE MATRIX ===</span>`);
+        appendTerminalLine(`• <span class="cmd">Enterprise SSD:</span> Solidigm D5-P5336 / Kioxia LC9 245.76 TB NVMe PCIe 5.0`);
+        appendTerminalLine(`• <span class="cmd">Enterprise HDD:</span> Seagate Exos Mozaic 3+ 32 TB HAMR SAS-4 (7200 RPM)`);
+        appendTerminalLine(`• <span class="cmd">Enterprise Tape:</span> IBM TS1170 50 TB Native (150 TB Comp) / LTO-9 18/45 TB`);
+      }
+      else if (lower === 'storage --list') {
+        appendTerminalLine(`<span class="ok">Active Logical Volumes:</span>`);
+        appendTerminalLine(`[VOL 1] /vol/nvme-flash-p01 | 50.0 PB Raw NVMe Pool | 85.6% Used`);
+        appendTerminalLine(`[VOL 2] /vol/hamr-archive-p02 | 35.0 PB HAMR Array  | 80.2% Used`);
+        appendTerminalLine(`[VOL 3] /vol/cold-tape-vault  | 13.45 PB Tape Library | 46.1% Used`);
+      }
+      else if (lower === 'node --status') {
+        appendTerminalLine(`<span class="ok">✓ 128/128 Drive Chassis Racks Operational. NVMe fabric latency: 12.4µs</span>`);
+      }
+      else if (lower === 'owner --list') {
+        appendTerminalLine(`<span class="info">Registered System Owners:</span>`);
+        ownersList.forEach(o => {
+          appendTerminalLine(`  - ${o.name} &lt;${o.email}&gt; [${o.status.toUpperCase()}]`);
+        });
+      }
+      else if (lower === 'system --health-check') {
+        appendTerminalLine(`<span class="warn">[DIAGNOSTICS] Scanning 128 NVMe-oF chassis and drive buses...</span>`);
+        setTimeout(() => {
+          appendTerminalLine(`<span class="ok">✓ DIAGNOSTICS COMPLETE: 0 Read Errors, PCIe Gen5 x16 Nominal, Cooling Normal (38°C).</span>`);
+        }, 800);
+      }
+      else if (lower === 'system --backup-now') {
+        appendTerminalLine(`<span class="warn">[BACKUP] Triggering snapshot replication to IBM TS1170 tape library...</span>`);
+        setTimeout(() => {
+          appendTerminalLine(`<span class="ok">✓ SNAPSHOT COMPLETED: 1.2 PB mirrored to tape WORM vault.</span>`);
+        }, 1200);
+      }
+      else if (lower === 'clear') {
+        document.getElementById('terminal-log').innerHTML = '';
+      }
+      else {
+        appendTerminalLine(`<span class="err">Command not recognized: '${escapeHtml(cmd)}'. Type 'help' for options.</span>`);
+      }
+    }
+
+    function appendTerminalLine(htmlContent) {
+      const log = document.getElementById('terminal-log');
+      if (!log) return;
+      const line = document.createElement('div');
+      line.className = 'terminal-line';
+      line.innerHTML = htmlContent;
+      log.appendChild(line);
+      log.scrollTop = log.scrollHeight;
+    }
+
+    // ==========================================
+    // STREAM & AUDIT LOG RENDERERS
+    // ==========================================
+    function addAuditLog(actor, action, target, result) {
+      auditLogs.unshift({
+        timestamp: new Date().toLocaleTimeString(),
+        actor: actor,
+        action: action,
+        target: target,
+        result: result
+      });
+      renderAuditTable();
+    }
+
+    function renderAuditTable() {
+      const tbody = document.getElementById('auditTableBody');
+      if (!tbody) return;
+      tbody.innerHTML = '';
+      auditLogs.forEach(log => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${log.timestamp}</td>
+          <td><strong>${escapeHtml(log.actor)}</strong></td>
+          <td><code>${escapeHtml(log.action)}</code></td>
+          <td>${escapeHtml(log.target)}</td>
+          <td><span class="role-badge role-admin">${log.result}</span></td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function renderStreamLogs() {
+      const container = document.getElementById('event-stream-body');
+      if (!container) return;
+      container.innerHTML = streamLogs.map(s => `<div class="terminal-line">${escapeHtml(s)}</div>`).join('');
+    }
+
+    function startRealtimeFeeds() {
+      setInterval(() => {
+        const events = [
+          `[INFO] PCIe Gen5 lane telemetry verified across Rack ${Math.floor(Math.random()*16 + 1)}.`,
+          `[OK] NVMe wear-level check passed for 245.76TB Solidigm array.`,
+          `[INFO] Automated ZFS scrub checked 12.4 TB/s cleanly.`,
+          `[INFO] SAS-4 controller heat check: 37.8°C.`
+        ];
+        const nextEvent = events[Math.floor(Math.random() * events.length)];
+        streamLogs.unshift(`[${new Date().toLocaleTimeString()}] ${nextEvent}`);
+        if (streamLogs.length > 30) streamLogs.pop();
+
+        if (document.getElementById('page-logs').classList.contains('active')) {
+          renderStreamLogs();
+        }
+      }, 4000);
+    }
+
+    // Helper functions
+    function showError(elementId, msg) {
+      const el = document.getElementById(elementId);
+      if (el) { el.textContent = ' Error: ' + msg; el.classList.add('show'); }
+    }
+    function showSuccess(elementId, msg) {
+      const el = document.getElementById(elementId);
+      if (el) { el.textContent = msg; el.classList.add('show'); }
+    }
+    function escapeHtml(str) {
+      return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    }
+  </script>
+</body>
+</html>
